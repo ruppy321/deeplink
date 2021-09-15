@@ -1,0 +1,100 @@
+<h1>Hello!</h1>
+<h2><a id="clicker" href="javascript:void(0);">Deep Link</a></h2>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<script>
+
+  $(document).delegate("#clicker", "click", function(){
+
+function DeepLinker(options) {
+  if (!options) {
+    throw new Error('no options')
+  }
+
+  var hasFocus = true;
+  var didHide = false;
+
+  function onBlur() {
+    hasFocus = false;
+  };
+  function onVisibilityChange(e) {
+    if (e.target.visibilityState === 'hidden') {
+      didHide = true;
+    }
+  };
+
+  function onFocus() {
+    if (didHide) {
+      if (options.onReturn) {
+        options.onReturn();
+      }
+
+      didHide = false; // reset
+    } else {
+      // ignore duplicate focus event when returning from native app on
+      // iOS Safari 13.3+
+      if (!hasFocus && options.onFallback) {
+        // wait for app switch transition to fully complete - only then is
+        // 'visibilitychange' fired
+        setTimeout(function() {
+          // if browser was not hidden, the deep link failed
+          if (!didHide) {
+            options.onFallback();
+          }
+        }, 1000);
+      }
+    }
+
+    hasFocus = true;
+  };
+
+
+  function bindEvents(mode) {
+    [
+      [window, 'blur', onBlur],
+      [document, 'visibilitychange', onVisibilityChange],
+      [window, 'focus', onFocus],
+    ].forEach(function(conf) {
+      conf[0][mode + 'EventListener'](conf[1], conf[2]);
+    });
+  }
+
+
+  bindEvents('add');
+
+
+  this.destroy = bindEvents.bind(null, 'remove');
+  this.openURL = function(url) {
+    // it can take a while for the dialog to appear
+    var dialogTimeout = 100;
+
+    setTimeout(function() {
+      if (hasFocus && options.onIgnored) {
+        options.onIgnored();
+      }
+    }, dialogTimeout);
+
+    window.location = url;
+  };
+}
+
+
+
+    var url = 'm.me/TapTheTable?ref=:t-1625184318646';
+    var appURL = 'https://tapthetable.io/webchat/?page_id=116373966799285&ref=:t-1625184318646';
+var linker = new DeepLinker({
+onIgnored: function() {
+  window.location = appURL;
+  console.log('browser failed to respond to the deep link');
+},
+onFallback: function() {
+   console.log('dialog hidden or user returned to tab');
+},
+onReturn: function() {
+  console.log('user returned to the page from the native app');
+},
+});
+linker.openURL(url);
+
+  })
+</script>
